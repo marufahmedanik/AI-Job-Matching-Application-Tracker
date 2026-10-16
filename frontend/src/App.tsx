@@ -126,6 +126,7 @@ export const App: React.FC = () => {
         onSeed={handleSeed}
         isSeeding={isSeeding}
         totalJobs={totalJobsCount}
+        profile={profile}
       />
 
       {/* Main Content Area */}

@@ -1,5 +1,16 @@
 import React from 'react';
-import { Briefcase, UserCheck, Kanban, PlusCircle, Sparkles, RefreshCw } from 'lucide-react';
+import {
+  Briefcase,
+  UserCheck,
+  Kanban,
+  PlusCircle,
+  Sparkles,
+  RefreshCw,
+  Github,
+  Linkedin,
+  Globe
+} from 'lucide-react';
+import type { UserProfile } from '../types';
 
 interface NavbarProps {
   activeTab: 'jobs' | 'kanban' | 'profile';
@@ -8,6 +19,7 @@ interface NavbarProps {
   onSeed: () => void;
   isSeeding: boolean;
   totalJobs: number;
+  profile?: UserProfile | null;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -16,7 +28,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddModal,
   onSeed,
   isSeeding,
-  totalJobs
+  totalJobs,
+  profile
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur border-b border-slate-800">
@@ -82,8 +95,47 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons & Candidate Social Pills */}
           <div className="flex items-center gap-2">
+            {profile && (
+              <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/70 border border-slate-700/70 text-xs">
+                <span className="text-slate-300 font-medium">{profile.name}</span>
+                {profile.github_url && (
+                  <a
+                    href={profile.github_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Candidate GitHub"
+                    className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition"
+                  >
+                    <Github className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                {profile.linkedin_url && (
+                  <a
+                    href={profile.linkedin_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Candidate LinkedIn"
+                    className="p-1 rounded hover:bg-slate-700 text-blue-400 hover:text-blue-300 transition"
+                  >
+                    <Linkedin className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                {profile.portfolio_url && (
+                  <a
+                    href={profile.portfolio_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Candidate Live Project (PhishGuard)"
+                    className="p-1 rounded hover:bg-slate-700 text-teal-400 hover:text-teal-300 transition"
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            )}
+
             <button
               onClick={onSeed}
               disabled={isSeeding}

@@ -57,6 +57,11 @@ export interface UserProfile {
   id: number;
   name: string;
   email?: string;
+  phone?: string;
+  linkedin_url?: string;
+  github_url?: string;
+  portfolio_url?: string;
+  bdjobs_profile_url?: string;
   degree: string;
   target_role: string;
   years_of_experience: number;

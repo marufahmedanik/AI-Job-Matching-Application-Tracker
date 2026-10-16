@@ -1,5 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Sparkles, Plus, X, Save, FileText, CheckCircle2, Upload } from 'lucide-react';
+import {
+  UserCheck,
+  Sparkles,
+  Plus,
+  X,
+  Save,
+  FileText,
+  CheckCircle2,
+  Upload,
+  Linkedin,
+  Github,
+  Globe,
+  ExternalLink,
+  Phone,
+  Mail,
+  Copy,
+  Check,
+  Link2
+} from 'lucide-react';
 import type { UserProfile } from '../types';
 import { api } from '../services/api';
 
@@ -10,6 +28,12 @@ interface ProfileEditorProps {
 
 export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfileUpdated }) => {
   const [name, setName] = useState(profile.name);
+  const [email, setEmail] = useState(profile.email || '');
+  const [phone, setPhone] = useState(profile.phone || '');
+  const [linkedinUrl, setLinkedinUrl] = useState(profile.linkedin_url || '');
+  const [githubUrl, setGithubUrl] = useState(profile.github_url || '');
+  const [portfolioUrl, setPortfolioUrl] = useState(profile.portfolio_url || '');
+  const [bdjobsProfileUrl, setBdjobsProfileUrl] = useState(profile.bdjobs_profile_url || '');
   const [degree, setDegree] = useState(profile.degree);
   const [targetRole, setTargetRole] = useState(profile.target_role);
   const [experience, setExperience] = useState(profile.years_of_experience);
@@ -20,9 +44,16 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfile
   const [saving, setSaving] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [copiedLinks, setCopiedLinks] = useState(false);
 
   useEffect(() => {
     setName(profile.name);
+    setEmail(profile.email || '');
+    setPhone(profile.phone || '');
+    setLinkedinUrl(profile.linkedin_url || '');
+    setGithubUrl(profile.github_url || '');
+    setPortfolioUrl(profile.portfolio_url || '');
+    setBdjobsProfileUrl(profile.bdjobs_profile_url || '');
     setDegree(profile.degree);
     setTargetRole(profile.target_role);
     setExperience(profile.years_of_experience);
@@ -41,6 +72,21 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfile
 
   const handleRemoveSkill = (skillToRemove: string) => {
     setSkills(skills.filter((s) => s !== skillToRemove));
+  };
+
+  const handleCopyProfileLinks = () => {
+    const text = `Candidate: ${name}
+Degree: ${degree}
+Target Role: ${targetRole}
+GitHub: ${githubUrl}
+LinkedIn: ${linkedinUrl}
+Portfolio (PhishGuard): ${portfolioUrl}
+${bdjobsProfileUrl ? `Bdjobs Profile: ${bdjobsProfileUrl}\n` : ''}Phone: ${phone}
+Email: ${email}`;
+
+    navigator.clipboard.writeText(text);
+    setCopiedLinks(true);
+    setTimeout(() => setCopiedLinks(false), 2500);
   };
 
   const handleParseCv = async () => {
@@ -68,6 +114,12 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfile
     try {
       const updated = await api.updateProfile({
         name,
+        email,
+        phone,
+        linkedin_url: linkedinUrl,
+        github_url: githubUrl,
+        portfolio_url: portfolioUrl,
+        bdjobs_profile_url: bdjobsProfileUrl,
         degree,
         target_role: targetRole,
         years_of_experience: Number(experience),
@@ -87,34 +139,246 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfile
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Banner */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-        <div className="flex items-start justify-between">
-          <div>
+      {/* Banner & Candidate Identity Summary */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-800 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                 <UserCheck className="w-5 h-5" />
               </span>
-              <h2 className="text-xl font-bold text-white">Your Candidate Profile & Career Criteria</h2>
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span>{name || 'Your Candidate Profile'}</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium">
+                    Verified Profile
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">
+                  {degree} &bull; {targetRole}
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-slate-400 mt-2 max-w-2xl leading-relaxed">
-              The AI matching engine evaluates Bdjobs postings against your degree, technical skills, and years of experience to calculate your explainable match scores.
+
+            <p className="text-xs text-slate-400 max-w-2xl leading-relaxed pt-1">
+              Your profile powers the explainable match score engine across all Bdjobs postings. You can link your LinkedIn, GitHub, live portfolio (PhishGuard), and Bdjobs account below for instant recruiter access.
             </p>
           </div>
-          {savedSuccess && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold animate-pulse">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Saved!</span>
-            </div>
+
+          <div className="flex items-center gap-2 self-start">
+            <button
+              type="button"
+              onClick={handleCopyProfileLinks}
+              title="Copy all professional profile links to clipboard"
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition active:scale-95"
+            >
+              {copiedLinks ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400 font-semibold">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Copy Profile Summary</span>
+                </>
+              )}
+            </button>
+
+            {savedSuccess && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold animate-pulse">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Saved!</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Clickable Profile Pill Badges */}
+        <div className="mt-5 pt-4 border-t border-slate-800/80 flex flex-wrap items-center gap-2.5">
+          <span className="text-xs font-semibold text-slate-400 mr-1 flex items-center gap-1">
+            <Link2 className="w-3.5 h-3.5 text-emerald-400" /> Linked Channels:
+          </span>
+
+          {linkedinUrl && (
+            <a
+              href={linkedinUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-medium transition"
+            >
+              <Linkedin className="w-3.5 h-3.5" />
+              <span>LinkedIn</span>
+              <ExternalLink className="w-3 h-3 opacity-60" />
+            </a>
+          )}
+
+          {githubUrl && (
+            <a
+              href={githubUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition"
+            >
+              <Github className="w-3.5 h-3.5" />
+              <span>GitHub</span>
+              <ExternalLink className="w-3 h-3 opacity-60" />
+            </a>
+          )}
+
+          {portfolioUrl && (
+            <a
+              href={portfolioUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-medium transition"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>PhishGuard Live</span>
+              <ExternalLink className="w-3 h-3 opacity-60" />
+            </a>
+          )}
+
+          {bdjobsProfileUrl && (
+            <a
+              href={bdjobsProfileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-medium transition"
+            >
+              <span>Bdjobs Profile</span>
+              <ExternalLink className="w-3 h-3 opacity-60" />
+            </a>
+          )}
+
+          {email && (
+            <a
+              href={`mailto:${email}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium transition"
+            >
+              <Mail className="w-3.5 h-3.5 text-slate-400" />
+              <span>{email}</span>
+            </a>
+          )}
+
+          {phone && (
+            <a
+              href={`tel:${phone.replace(/\s+/g, '')}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium transition"
+            >
+              <Phone className="w-3.5 h-3.5 text-slate-400" />
+              <span>{phone}</span>
+            </a>
           )}
         </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
+        {/* Professional Profiles & Social Links */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white uppercase tracking-wider text-slate-400 flex items-center gap-2">
+              <Link2 className="w-4 h-4 text-emerald-400" />
+              1. Professional Links & Online Profiles
+            </h3>
+            <span className="text-xs text-slate-500">Recruiter Visibility & Application Header</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+                <Linkedin className="w-3.5 h-3.5 text-blue-400" />
+                LinkedIn Profile URL
+              </label>
+              <input
+                type="url"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+                placeholder="https://linkedin.com/in/yourprofile"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+                <Github className="w-3.5 h-3.5 text-slate-300" />
+                GitHub Profile URL
+              </label>
+              <input
+                type="url"
+                value={githubUrl}
+                onChange={(e) => setGithubUrl(e.target.value)}
+                placeholder="https://github.com/yourhandle"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-teal-400" />
+                Live Portfolio / Project URL (e.g. PhishGuard)
+              </label>
+              <input
+                type="url"
+                value={portfolioUrl}
+                onChange={(e) => setPortfolioUrl(e.target.value)}
+                placeholder="https://phish-guard-uipa.vercel.app/"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                Bdjobs Candidate Profile URL (Optional)
+              </label>
+              <input
+                type="url"
+                value={bdjobsProfileUrl}
+                onChange={(e) => setBdjobsProfileUrl(e.target.value)}
+                placeholder="https://mybdjobs.bdjobs.com/..."
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="bd.ahmed.anik@gmail.com"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-slate-400" />
+                Contact Phone / WhatsApp
+              </label>
+              <input
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+880 1571-390503"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Core Profile Fields */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
           <h3 className="text-sm font-semibold text-white uppercase tracking-wider text-slate-400">
-            1. Basic Information & Background
+            2. Basic Information & Academic Background
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -128,12 +392,12 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfile
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Academic Degree</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Academic Degree & University</label>
               <input
                 type="text"
                 value={degree}
                 onChange={(e) => setDegree(e.target.value)}
-                placeholder="e.g. B.Sc. in Computer Science and Engineering"
+                placeholder="e.g. B.Sc. in Computer Science and Engineering (East West University)"
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -146,7 +410,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfile
                 type="text"
                 value={targetRole}
                 onChange={(e) => setTargetRole(e.target.value)}
-                placeholder="e.g. Software QA Engineer"
+                placeholder="e.g. Software QA Engineer / Software Engineer"
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -167,6 +431,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfile
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. Khilgaon, Dhaka, Bangladesh"
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -178,9 +443,9 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfile
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-white uppercase tracking-wider text-slate-400">
-                2. Technical Skills Inventory ({skills.length})
+                3. Technical Skills Inventory ({skills.length})
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">These are directly compared against job requirements.</p>
+              <p className="text-xs text-slate-400 mt-0.5">These are directly compared against job requirements for explainable match scoring.</p>
             </div>
           </div>
 
@@ -234,7 +499,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfile
             <div>
               <h3 className="text-sm font-semibold text-white uppercase tracking-wider text-slate-400 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-emerald-400" />
-                3. CV / Resume (Paste or Upload PDF)
+                4. CV / Resume (Paste or Upload PDF)
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 Upload your PDF resume or paste text to auto-extract skills using PyMuPDF.

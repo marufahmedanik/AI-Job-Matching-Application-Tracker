@@ -6,6 +6,11 @@ from datetime import datetime
 class UserProfileBase(BaseModel):
     name: str = "Md. Maruf Ahmed Anik"
     email: Optional[str] = "bd.ahmed.anik@gmail.com"
+    phone: Optional[str] = "+880 1571-390503"
+    linkedin_url: Optional[str] = "https://linkedin.com/in/marufahmedanik"
+    github_url: Optional[str] = "https://github.com/marufahmedanik"
+    portfolio_url: Optional[str] = "https://phish-guard-uipa.vercel.app/"
+    bdjobs_profile_url: Optional[str] = None
     degree: str = "B.Sc. in Computer Science and Engineering (East West University)"
     target_role: str = "Software Engineer / SQA Engineer"
     years_of_experience: float = 0.5
@@ -25,6 +30,11 @@ class UserProfileCreate(UserProfileBase):
 class UserProfileUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
+    phone: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    bdjobs_profile_url: Optional[str] = None
     degree: Optional[str] = None
     target_role: Optional[str] = None
     years_of_experience: Optional[float] = None

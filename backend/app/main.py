@@ -48,14 +48,19 @@ def get_or_create_default_profile(db: Session) -> UserProfile:
     profile = db.query(UserProfile).first()
     if not profile:
         profile = UserProfile(
-            name="Candidate (CSE)",
-            email="candidate@example.com",
-            degree="B.Sc. in Computer Science and Engineering",
-            target_role="Software QA Engineer",
-            years_of_experience=1.0,
-            skills="Java, SQL, Git, API Testing, Postman, Manual Testing, Bug Reporting, Jira",
-            preferred_location="Dhaka, Bangladesh",
-            raw_cv_text="Computer Science & Engineering graduate with 1 year experience in software quality assurance, manual testing, API testing with Postman, writing SQL queries, and bug reporting in Jira. Familiar with Git and basic Java."
+            name="Md. Maruf Ahmed Anik",
+            email="bd.ahmed.anik@gmail.com",
+            degree="B.Sc. in Computer Science and Engineering (East West University)",
+            target_role="Software Engineer / SQA Engineer",
+            years_of_experience=0.5,
+            skills="Python, FastAPI, React, JavaScript, Java, SQL, Git, REST API, Manual Testing, API Testing, Postman, Android SDK, Firebase, Scikit-learn, HuggingFace, NLP",
+            phone="+880 1571-390503",
+            linkedin_url="https://linkedin.com/in/marufahmedanik",
+            github_url="https://github.com/marufahmedanik",
+            portfolio_url="https://phish-guard-uipa.vercel.app/",
+            bdjobs_profile_url=None,
+            preferred_location="Khilgaon, Dhaka, Bangladesh",
+            raw_cv_text="Computer Science & Engineering graduate from East West University with background in Software Engineering, SQA, Python, FastAPI, React, Android SDK, and ML. Project lead for PhishGuard."
         )
         db.add(profile)
         db.commit()
@@ -89,6 +94,11 @@ def get_profile(db: Session = Depends(get_db)):
         id=profile.id,
         name=profile.name,
         email=profile.email,
+        phone=profile.phone,
+        linkedin_url=profile.linkedin_url,
+        github_url=profile.github_url,
+        portfolio_url=profile.portfolio_url,
+        bdjobs_profile_url=profile.bdjobs_profile_url,
         degree=profile.degree,
         target_role=profile.target_role,
         years_of_experience=profile.years_of_experience,
@@ -107,6 +117,16 @@ def update_profile(data: UserProfileUpdate, db: Session = Depends(get_db)):
         profile.name = data.name
     if data.email is not None:
         profile.email = data.email
+    if data.phone is not None:
+        profile.phone = data.phone
+    if data.linkedin_url is not None:
+        profile.linkedin_url = data.linkedin_url
+    if data.github_url is not None:
+        profile.github_url = data.github_url
+    if data.portfolio_url is not None:
+        profile.portfolio_url = data.portfolio_url
+    if data.bdjobs_profile_url is not None:
+        profile.bdjobs_profile_url = data.bdjobs_profile_url
     if data.degree is not None:
         profile.degree = data.degree
     if data.target_role is not None:
@@ -132,6 +152,11 @@ def update_profile(data: UserProfileUpdate, db: Session = Depends(get_db)):
         id=profile.id,
         name=profile.name,
         email=profile.email,
+        phone=profile.phone,
+        linkedin_url=profile.linkedin_url,
+        github_url=profile.github_url,
+        portfolio_url=profile.portfolio_url,
+        bdjobs_profile_url=profile.bdjobs_profile_url,
         degree=profile.degree,
         target_role=profile.target_role,
         years_of_experience=profile.years_of_experience,
