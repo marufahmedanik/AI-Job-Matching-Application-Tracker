@@ -15,9 +15,6 @@
 
 - **Developer**: **Md. Maruf Ahmed Anik**
 - **Education**: B.Sc. in Computer Science and Engineering, East West University
-- **Target Role**: Software Engineer / Software QA Engineer
-- **Coursework**: Software Testing & Quality Assurance (CSE430), Software Engineering (CSE412), Database Systems (CSE302), Algorithms (CSE246 - Grade A+)
-- **Featured Capstone**: [PhishGuard - AI Phishing Detection](https://phish-guard-uipa.vercel.app/) ([GitHub Repo](https://github.com/aishu-sudo/PhishGuard))
 - **Profiles**: [LinkedIn](https://linkedin.com/in/marufahmedanik) &bull; [GitHub](https://github.com/marufahmedanik)
 
 ---
