@@ -84,6 +84,29 @@ export const App: React.FC = () => {
     }
   };
 
+  const [isSyncingLive, setIsSyncingLive] = useState(false);
+  const [syncStatusBanner, setSyncStatusBanner] = useState<string | null>(null);
+
+  const handleSyncLive = async () => {
+    setIsSyncingLive(true);
+    setSyncStatusBanner("Connecting to Bdjobs live feed... Scanning active IT & SQA postings...");
+    try {
+      const res = await api.syncLiveJobs("8", "", 1, false);
+      setSyncStatusBanner(`Live scan complete: Scanned ${res.total_scanned} live listings. Ingested ${res.new_imported} new, ${res.high_matches} strong matches for your profile!`);
+      setTimeout(() => setSyncStatusBanner(null), 6000);
+      setPage(1);
+      const paginatedData = await api.getJobs(1, pageSize, sortBy);
+      setJobs(paginatedData.items || []);
+      setTotalPages(paginatedData.total_pages || 1);
+      setTotalJobsCount(paginatedData.total || 0);
+    } catch (err: any) {
+      setSyncStatusBanner(`Scan notice: ${err.message || 'Failed to scan live jobs'}`);
+      setTimeout(() => setSyncStatusBanner(null), 6000);
+    } finally {
+      setIsSyncingLive(false);
+    }
+  };
+
   const handleTrackJob = async (jobId: number, status: string) => {
     try {
       await api.trackApplication(jobId, status);
@@ -127,10 +150,26 @@ export const App: React.FC = () => {
         isSeeding={isSeeding}
         totalJobs={totalJobsCount}
         profile={profile}
+        onSyncLive={handleSyncLive}
+        isSyncingLive={isSyncingLive}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {syncStatusBanner && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3 text-xs text-emerald-300 flex items-center justify-between shadow-lg">
+            <span className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>{syncStatusBanner}</span>
+            </span>
+            <button
+              onClick={() => setSyncStatusBanner(null)}
+              className="text-slate-400 hover:text-white text-base px-2 leading-none"
+            >
+              &times;
+            </button>
+          </div>
+        )}
         {/* Metric Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">

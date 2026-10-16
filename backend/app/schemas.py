@@ -123,3 +123,21 @@ class JobImportRequest(BaseModel):
     company: Optional[str] = ""
     raw_description: Optional[str] = ""
     source: str = "Bdjobs"
+
+
+class LiveSyncRequest(BaseModel):
+    category: Optional[str] = "8"
+    keyword: Optional[str] = ""
+    max_pages: Optional[int] = 1
+    is_fresher: Optional[bool] = False
+
+
+class LiveSyncResponse(BaseModel):
+    success: bool
+    category: str
+    keyword: str
+    total_scanned: int
+    new_imported: int
+    already_existing: int
+    high_matches: int
+    top_matched_jobs: List[Dict[str, Any]]

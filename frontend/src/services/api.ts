@@ -91,6 +91,19 @@ export const api = {
     return res.json();
   },
 
+  syncLiveJobs: async (category: string = "8", keyword: string = "", maxPages: number = 1, isFresher: boolean = false) => {
+    const res = await fetch(`${BASE_URL}/jobs/sync-live`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, keyword, max_pages: maxPages, is_fresher: isFresher }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to scan live Bdjobs');
+    }
+    return res.json();
+  },
+
   // Applications
   getApplications: async (): Promise<JobApplication[]> => {
     const res = await fetch(`${BASE_URL}/applications`);

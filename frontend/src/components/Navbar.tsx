@@ -20,6 +20,8 @@ interface NavbarProps {
   isSeeding: boolean;
   totalJobs: number;
   profile?: UserProfile | null;
+  onSyncLive?: () => void;
+  isSyncingLive?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -29,7 +31,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSeed,
   isSeeding,
   totalJobs,
-  profile
+  profile,
+  onSyncLive,
+  isSyncingLive
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur border-b border-slate-800">
@@ -134,6 +138,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </a>
                 )}
               </div>
+            )}
+
+            {onSyncLive && (
+              <button
+                onClick={onSyncLive}
+                disabled={isSyncingLive}
+                title="Scan live active IT & Software jobs directly from Bdjobs.com"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 rounded-lg transition active:scale-95 disabled:opacity-50 shadow-sm"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingLive ? 'animate-spin text-emerald-400' : 'text-emerald-400'}`} />
+                <span>{isSyncingLive ? 'Scanning Bdjobs...' : 'Scan Live Bdjobs'}</span>
+              </button>
             )}
 
             <button

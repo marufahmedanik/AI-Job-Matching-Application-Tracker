@@ -5,14 +5,24 @@ __pycache__/
 *.so
 .Python
 backend/venv/
+venv/
 backend/.pytest_cache/
 .pytest_cache/
+*.coverage
+.coverage
+htmlcov/
+backend/.coverage
+backend/htmlcov/
 *.db
 *.sqlite3
+backend/*.db
+jobs.db
 
 # Node
 frontend/node_modules/
+node_modules/
 frontend/dist/
+dist/
 frontend/.cache/
 frontend/playwright-report/
 frontend/test-results/
@@ -20,7 +30,11 @@ frontend/test-results/
 # Environment
 .env
 .env.local
+.env.*.local
 
-# IDE
+# IDE & OS
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
+*.log
