@@ -10,13 +10,13 @@ class UserProfile(Base):
     __tablename__ = "user_profiles"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(120), default="Candidate")
-    email = Column(String(120), nullable=True)
-    degree = Column(String(200), default="B.Sc. in Computer Science and Engineering")
-    target_role = Column(String(150), default="Software QA Engineer")
-    years_of_experience = Column(Float, default=1.0)
-    skills = Column(Text, default="Java, SQL, Git, API Testing, Postman, Manual Testing, Bug Reporting, Jira")
-    preferred_location = Column(String(100), default="Dhaka, Bangladesh")
+    name = Column(String(120), default="Md. Maruf Ahmed Anik")
+    email = Column(String(120), default="bd.ahmed.anik@gmail.com")
+    degree = Column(String(200), default="B.Sc. in Computer Science and Engineering (East West University)")
+    target_role = Column(String(150), default="Software Engineer / SQA Engineer")
+    years_of_experience = Column(Float, default=0.5)
+    skills = Column(Text, default="Python, FastAPI, React, Java, SQL, Git, REST API, API Testing, Postman, Manual Testing, Android SDK, Firebase")
+    preferred_location = Column(String(100), default="Khilgaon, Dhaka, Bangladesh")
     raw_cv_text = Column(Text, nullable=True)
     created_at = Column(DateTime, default=_now)
 

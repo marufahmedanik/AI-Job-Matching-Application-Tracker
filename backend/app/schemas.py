@@ -4,13 +4,17 @@ from datetime import datetime
 
 
 class UserProfileBase(BaseModel):
-    name: str = "Tariqul Islam"
-    email: Optional[str] = "tariqul.cse@example.com"
-    degree: str = "B.Sc. in Computer Science and Engineering"
-    target_role: str = "Software QA Engineer"
-    years_of_experience: float = 1.0
-    skills: List[str] = ["Java", "SQL", "Git", "API Testing", "Postman", "Manual Testing", "Bug Reporting", "Jira"]
-    preferred_location: str = "Dhaka, Bangladesh"
+    name: str = "Md. Maruf Ahmed Anik"
+    email: Optional[str] = "bd.ahmed.anik@gmail.com"
+    degree: str = "B.Sc. in Computer Science and Engineering (East West University)"
+    target_role: str = "Software Engineer / SQA Engineer"
+    years_of_experience: float = 0.5
+    skills: List[str] = [
+        "Python", "FastAPI", "React", "JavaScript", "Java", "SQL", "Git",
+        "REST API", "Manual Testing", "API Testing", "Postman", "Android SDK",
+        "Firebase", "Scikit-learn", "HuggingFace", "NLP"
+    ]
+    preferred_location: str = "Khilgaon, Dhaka, Bangladesh"
     raw_cv_text: Optional[str] = None
 
 
