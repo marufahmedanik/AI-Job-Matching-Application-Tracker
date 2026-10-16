@@ -39,7 +39,8 @@ results.append(("EC4. Patch non-existent app (expect 404)", s == 404, "http_stat
 
 # --- Edge Case 5: Match score for zero-skill user ---
 s, profile = req("PUT", "/profile", {"skills": [], "years_of_experience": 0.0})
-s2, jobs = req("GET", "/jobs?sort_by=match")
+s2, jobs_resp = req("GET", "/jobs?sort_by=match")
+jobs = jobs_resp.get("items", []) if isinstance(jobs_resp, dict) else jobs_resp
 all_low = all(j.get("match_score", 100) < 50 for j in jobs)
 results.append(("EC5. Zero-skill user: all jobs score<50", all_low,
                "scores=" + str([round(j.get("match_score",0)) for j in jobs])))
@@ -65,7 +66,8 @@ results.append(("EC7. CV parse long text (>5000 chars)", s == 200 and len(extrac
 # --- Edge Case 8: Double-seed should not create duplicates ---
 req("POST", "/seed")
 req("POST", "/seed")
-s, jobs = req("GET", "/jobs")
+s, jobs_resp2 = req("GET", "/jobs")
+jobs = jobs_resp2.get("items", []) if isinstance(jobs_resp2, dict) else jobs_resp2
 brain_count = sum(1 for j in jobs if "Brain Station" in j.get("company", ""))
 results.append(("EC8. Double seed no duplicates", brain_count == 1,
                "Brain Station 23 count=" + str(brain_count) + " total=" + str(len(jobs))))

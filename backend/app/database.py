@@ -4,10 +4,23 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./jobs.db")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-)
+# Handle Render/Heroku style postgres:// URLs
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False}
+    )
+else:
+    # PostgreSQL configuration with connection pooling
+    engine = create_engine(
+        DATABASE_URL,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

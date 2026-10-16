@@ -63,6 +63,20 @@ class JobListingResponse(JobListingBase):
     score_breakdown: Optional[Dict[str, Any]] = None
     summary_explanation: Optional[str] = None
     application_status: Optional[str] = None  # SAVED, APPLIED, etc. if application exists
+    deadline_status: Optional[str] = None     # EXPIRED, EXPIRING_SOON, ACTIVE, OPEN
+    days_until_deadline: Optional[int] = None
+    radar_data: Optional[List[Dict[str, Any]]] = None  # Category radar comparison data
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedJobsResponse(BaseModel):
+    items: List[JobListingResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    has_next: bool
+    has_prev: bool
     model_config = ConfigDict(from_attributes=True)
 
 

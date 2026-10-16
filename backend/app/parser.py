@@ -1,8 +1,70 @@
 import re
+from datetime import datetime, timezone
 import httpx
 from bs4 import BeautifulSoup
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Tuple
+import pymupdf
 from .matcher import extract_skills_from_text, extract_min_experience_from_text
+
+
+def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    """
+    Extracts plain text from raw PDF bytes using PyMuPDF.
+    Handles multi-page documents, cleans whitespace, and preserves word boundaries.
+    """
+    if not pdf_bytes:
+        return ""
+
+    doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+    pages_text = []
+    for page in doc:
+        pages_text.append(page.get_text())
+    doc.close()
+
+    full_text = "\n".join(pages_text)
+    # Clean redundant empty lines
+    cleaned = re.sub(r'\n\s*\n+', '\n\n', full_text).strip()
+    return cleaned
+
+
+def parse_deadline_info(deadline_str: Optional[str]) -> Tuple[Optional[int], str]:
+    """
+    Parses a deadline string and calculates days remaining from current date.
+    Returns: (days_remaining, status)
+    status can be: 'EXPIRED', 'EXPIRING_SOON' (<= 7 days), 'ACTIVE', or 'OPEN'.
+    """
+    if not deadline_str or deadline_str.strip().lower() in ["open", "n/a", "continuous", ""]:
+        return None, "OPEN"
+
+    cleaned = deadline_str.strip()
+
+    # Try common formats
+    formats = [
+        "%d %b %Y",       # 25 Nov 2026
+        "%d %B %Y",      # 25 November 2026
+        "%Y-%m-%d",      # 2026-11-25
+        "%d/%m/%Y",      # 25/11/2026
+        "%m/%d/%Y",      # 11/25/2026
+        "%b %d, %Y",     # Nov 25, 2026
+    ]
+
+    now_date = datetime.now(timezone.utc).date()
+
+    for fmt in formats:
+        try:
+            parsed_date = datetime.strptime(cleaned, fmt).date()
+            diff_days = (parsed_date - now_date).days
+
+            if diff_days < 0:
+                return diff_days, "EXPIRED"
+            elif diff_days <= 7:
+                return diff_days, "EXPIRING_SOON"
+            else:
+                return diff_days, "ACTIVE"
+        except ValueError:
+            continue
+
+    return None, "OPEN"
 
 
 async def fetch_job_from_url(url: str) -> Dict[str, Any]:
@@ -52,7 +114,6 @@ async def fetch_job_from_url(url: str) -> Dict[str, Any]:
             # Heuristic for company name
             company = "Company via Bdjobs"
             if "bdjobs" in url.lower():
-                # Check for bdjobs specific company breadcrumb or headers
                 comp_tag = soup.find("h2") or soup.find(class_=re.compile("company", re.I))
                 if comp_tag:
                     company = comp_tag.get_text(strip=True)

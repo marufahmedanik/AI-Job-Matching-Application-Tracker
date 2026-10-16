@@ -3,6 +3,9 @@ uvicorn==0.34.0
 pydantic==2.10.4
 sqlalchemy==2.0.36
 pytest==8.3.4
+pytest-cov==7.1.0
 httpx==0.28.1
 beautifulsoup4==4.12.3
 python-multipart==0.0.20
+pymupdf==1.28.2
+psycopg2-binary==2.9.13

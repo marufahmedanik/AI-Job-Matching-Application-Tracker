@@ -1,22 +1,43 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: jobmatcher_db
+    environment:
+      POSTGRES_USER: jobuser
+      POSTGRES_PASSWORD: jobpassword123
+      POSTGRES_DB: jobmatcher_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobuser -d jobmatcher_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: jobmatcher_backend
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:///./jobs.db
-    volumes:
-      - backend-data:/app
+      - DATABASE_URL=postgresql://jobuser:jobpassword123@postgres:5432/jobmatcher_db
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: jobmatcher_frontend
     ports:
       - "3000:80"
     depends_on:
@@ -24,4 +45,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  backend-data:
+  pgdata:

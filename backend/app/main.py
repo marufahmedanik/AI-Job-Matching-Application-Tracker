@@ -1,6 +1,7 @@
 import json
+import math
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -10,14 +11,19 @@ from .schemas import (
     UserProfileResponse, UserProfileUpdate,
     JobListingResponse, JobListingCreate,
     JobApplicationResponse, JobApplicationUpdate,
-    JobImportRequest
+    JobImportRequest, PaginatedJobsResponse
 )
 from .matcher import (
     calculate_match_score,
     extract_skills_from_text,
     extract_min_experience_from_text
 )
-from .parser import fetch_job_from_url, parse_job_text
+from .parser import (
+    fetch_job_from_url,
+    parse_job_text,
+    extract_text_from_pdf_bytes,
+    parse_deadline_info
+)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -152,11 +158,60 @@ def parse_cv_endpoint(payload: dict, db: Session = Depends(get_db)):
     }
 
 
+@app.post("/api/profile/upload-cv-pdf")
+async def upload_cv_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """
+    Accepts a PDF resume/CV, extracts text using PyMuPDF, detects skills & experience,
+    and automatically updates the candidate's profile.
+    """
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded PDF is empty.")
+
+    try:
+        extracted_text = extract_text_from_pdf_bytes(content)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse PDF: {str(e)}")
+
+    if not extracted_text.strip():
+        raise HTTPException(status_code=400, detail="Could not extract text from the PDF. It may be an image scan.")
+
+    extracted_skills = extract_skills_from_text(extracted_text)
+    extracted_exp = extract_min_experience_from_text(extracted_text)
+
+    # Update candidate profile
+    profile = get_or_create_default_profile(db)
+    current_skills = parse_skills_string(profile.skills)
+    merged_skills = sorted(list(set(current_skills + extracted_skills)))
+
+    profile.skills = json.dumps(merged_skills)
+    profile.raw_cv_text = extracted_text
+    if extracted_exp > 0 and profile.years_of_experience <= 1.0:
+        profile.years_of_experience = extracted_exp
+
+    db.commit()
+    db.refresh(profile)
+
+    return {
+        "message": f"Successfully parsed '{file.filename}' with PyMuPDF",
+        "extracted_skills": extracted_skills,
+        "extracted_experience": extracted_exp,
+        "total_skills_count": len(merged_skills),
+        "text_preview": extracted_text[:400] + ("..." if len(extracted_text) > 400 else "")
+    }
+
+
 # ---------------- Job Endpoints ----------------
-@app.get("/api/jobs", response_model=List[JobListingResponse])
+@app.get("/api/jobs", response_model=PaginatedJobsResponse)
 def get_jobs(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page"),
     sort_by: str = Query("match", description="Sort by 'match', 'recent', or 'title'"),
     source: Optional[str] = None,
+    min_score: Optional[float] = None,
     db: Session = Depends(get_db)
 ):
     profile = get_or_create_default_profile(db)
@@ -187,6 +242,12 @@ def get_jobs(
             job_raw_description=job.raw_description
         )
 
+        total_score = float(match_info["total_score"])
+        if min_score is not None and total_score < min_score:
+            continue
+
+        days_remaining, dl_status = parse_deadline_info(job.deadline)
+
         results.append(JobListingResponse(
             id=job.id,
             title=job.title,
@@ -201,12 +262,15 @@ def get_jobs(
             required_skills=job_skills if job_skills else match_info["matched_skills"] + match_info["missing_skills_only"],
             raw_description=job.raw_description,
             created_at=job.created_at,
-            match_score=float(match_info["total_score"]),
+            match_score=total_score,
             matched_skills=match_info["matched_skills"],
             missing_skills=match_info["missing_skills"],
             score_breakdown=match_info["breakdown"],
             summary_explanation=match_info["summary"],
-            application_status=app_map.get(job.id, None)
+            application_status=app_map.get(job.id, None),
+            deadline_status=dl_status,
+            days_until_deadline=days_remaining,
+            radar_data=match_info.get("radar_data", [])
         ))
 
     if sort_by == "match":
@@ -216,7 +280,21 @@ def get_jobs(
     elif sort_by == "title":
         results.sort(key=lambda x: x.title.lower())
 
-    return results
+    total = len(results)
+    total_pages = max(1, math.ceil(total / page_size))
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    paginated_items = results[start_idx:end_idx]
+
+    return PaginatedJobsResponse(
+        items=paginated_items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        has_next=page < total_pages,
+        has_prev=page > 1
+    )
 
 
 @app.post("/api/jobs/import", response_model=JobListingResponse)
@@ -250,6 +328,28 @@ async def import_job(payload: JobImportRequest, db: Session = Depends(get_db)):
     else:
         raise HTTPException(status_code=400, detail="Please provide either a valid job URL or paste the job description text.")
 
+    # 2. Duplicate Detection: Check URL or Title + Company match
+    title_clean = parsed["title"].strip()
+    company_clean = parsed["company"].strip()
+    url_clean = (parsed.get("url") or "").strip()
+
+    duplicate_query = db.query(JobListing).filter(
+        (JobListing.title.ilike(title_clean)) &
+        (JobListing.company.ilike(company_clean))
+    )
+    if url_clean:
+        duplicate_query = db.query(JobListing).filter(
+            (JobListing.url == url_clean) |
+            ((JobListing.title.ilike(title_clean)) & (JobListing.company.ilike(company_clean)))
+        )
+
+    duplicate_found = duplicate_query.first()
+    if duplicate_found:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Duplicate job: '{title_clean}' at '{company_clean}' is already in your listings (ID: {duplicate_found.id})."
+        )
+
     new_job = JobListing(
         title=parsed["title"],
         company=parsed["company"],
@@ -280,6 +380,8 @@ async def import_job(payload: JobImportRequest, db: Session = Depends(get_db)):
         job_raw_description=new_job.raw_description
     )
 
+    days_remaining, dl_status = parse_deadline_info(new_job.deadline)
+
     return JobListingResponse(
         id=new_job.id,
         title=new_job.title,
@@ -299,8 +401,12 @@ async def import_job(payload: JobImportRequest, db: Session = Depends(get_db)):
         missing_skills=match_info["missing_skills"],
         score_breakdown=match_info["breakdown"],
         summary_explanation=match_info["summary"],
-        application_status=None
+        application_status=None,
+        deadline_status=dl_status,
+        days_until_deadline=days_remaining,
+        radar_data=match_info.get("radar_data", [])
     )
+
 
 
 @app.delete("/api/jobs/{job_id}")

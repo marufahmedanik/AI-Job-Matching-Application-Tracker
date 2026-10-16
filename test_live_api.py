@@ -42,7 +42,8 @@ s, d = req("POST", "/seed")
 results.append(("4. Seed sample Bdjobs data", s == 200, str(d.get("message"))))
 
 # 5. Get ranked jobs (sorted by match)
-s, jobs = req("GET", "/jobs?sort_by=match")
+s, jobs_resp = req("GET", "/jobs?sort_by=match")
+jobs = jobs_resp.get("items", []) if isinstance(jobs_resp, dict) else jobs_resp
 results.append(("5. Get ranked jobs list", s == 200 and len(jobs) >= 5, str(len(jobs)) + " jobs returned"))
 
 # 6. Validate illustrative example: Brain Station 23 = 82/100
@@ -134,12 +135,14 @@ s, d = req("DELETE", "/jobs/" + str(new_job.get("id", 999)))
 results.append(("16. Delete job listing", s == 200, str(d.get("message"))))
 
 # 17. Filter by source
-s, bdjobs_filtered = req("GET", "/jobs?sort_by=match&source=Bdjobs")
+s, bdjobs_resp = req("GET", "/jobs?sort_by=match&source=Bdjobs")
+bdjobs_filtered = bdjobs_resp.get("items", []) if isinstance(bdjobs_resp, dict) else bdjobs_resp
 results.append(("17. Filter jobs by source=Bdjobs", s == 200 and all(j.get("source") == "Bdjobs" for j in bdjobs_filtered),
                str(len(bdjobs_filtered)) + " Bdjobs listings"))
 
 # 18. Sort by title
-s, by_title = req("GET", "/jobs?sort_by=title")
+s, by_title_resp = req("GET", "/jobs?sort_by=title")
+by_title = by_title_resp.get("items", []) if isinstance(by_title_resp, dict) else by_title_resp
 titles = [j["title"] for j in by_title]
 results.append(("18. Sort by title (alphabetical)", s == 200 and titles == sorted(titles, key=str.lower),
                "first=" + (titles[0] if titles else "N/A")))

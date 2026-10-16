@@ -195,11 +195,50 @@ def calculate_match_score(
     else:
         summary = f"Low match ({total_score}/100). Consider upskilling in {', '.join(missing_skills[:3]) if missing_skills else 'the required domains'} before applying."
 
+    # Compute category radar data for chart visualization
+    radar_data = compute_radar_breakdown(user_skills_set, target_job_skills)
+
     return {
         "total_score": total_score,
         "matched_skills": matched_skills,
         "missing_skills": missing_items,
         "missing_skills_only": missing_skills,
         "breakdown": breakdown,
-        "summary": summary
+        "summary": summary,
+        "radar_data": radar_data
     }
+
+
+def compute_radar_breakdown(user_skills: Set[str], job_skills: Set[str]) -> List[Dict[str, Any]]:
+    """
+    Computes category-wise coverage percentages formatted for RadarChart visualization.
+    """
+    categories = {
+        "Testing & Automation": {"Manual Testing", "Automation Testing", "API Testing", "Selenium", "Playwright", "Cypress", "Postman", "JMeter", "Pytest", "JUnit", "TestNG", "Appium"},
+        "Languages & DB": {"Java", "Python", "SQL", "JavaScript", "TypeScript", "C#", "C++", "Bash/Shell", "REST API", "HTML/CSS"},
+        "DevOps & Cloud": {"Git", "CI/CD", "Jenkins", "Docker", "Linux"},
+        "Process & STLC": {"Bug Reporting", "Test Planning", "Jira", "TestRail", "STLC", "SDLC", "Agile/Scrum", "Security Testing"}
+    }
+
+    results = []
+    for cat_name, cat_skills in categories.items():
+        job_in_cat = cat_skills.intersection(job_skills)
+        user_in_cat = cat_skills.intersection(user_skills)
+
+        if job_in_cat:
+            req_score = 100
+            user_score = round((len(user_in_cat.intersection(job_in_cat)) / len(job_in_cat)) * 100)
+        else:
+            # Baseline if job doesn't explicitly require it
+            req_score = 60
+            user_score = min(100, len(user_in_cat) * 35)
+
+        results.append({
+            "subject": cat_name,
+            "candidate": user_score,
+            "required": req_score,
+            "fullMark": 100
+        })
+
+    return results
+

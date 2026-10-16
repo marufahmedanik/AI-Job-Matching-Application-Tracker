@@ -1,4 +1,4 @@
-import type { JobListing, UserProfile, JobApplication } from '../types';
+import type { JobListing, UserProfile, JobApplication, PaginatedJobsResponse } from '../types';
 
 const BASE_URL = '/api';
 
@@ -36,10 +36,32 @@ export const api = {
     return res.json();
   },
 
+  uploadCvPdf: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${BASE_URL}/profile/upload-cv-pdf`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to upload and parse PDF CV');
+    }
+    return res.json();
+  },
+
   // Jobs
-  getJobs: async (sortBy: 'match' | 'recent' | 'title' = 'match', source?: string): Promise<JobListing[]> => {
-    let url = `${BASE_URL}/jobs?sort_by=${sortBy}`;
+  getJobs: async (
+    page: number = 1,
+    pageSize: number = 10,
+    sortBy: 'match' | 'recent' | 'title' = 'match',
+    source?: string,
+    minScore?: number
+  ): Promise<PaginatedJobsResponse> => {
+    let url = `${BASE_URL}/jobs?page=${page}&page_size=${pageSize}&sort_by=${sortBy}`;
     if (source) url += `&source=${encodeURIComponent(source)}`;
+    if (minScore !== undefined) url += `&min_score=${minScore}`;
+
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch jobs');
     return res.json();

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Sparkles, Plus, X, Save, FileText, CheckCircle2 } from 'lucide-react';
+import { UserCheck, Sparkles, Plus, X, Save, FileText, CheckCircle2, Upload } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { api } from '../services/api';
 
@@ -228,34 +228,73 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile, onProfile
           </div>
         </div>
 
-        {/* CV / Resume Text Paste & Extraction */}
+        {/* CV / Resume Text Paste & PDF Upload via PyMuPDF */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-white uppercase tracking-wider text-slate-400 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-emerald-400" />
-                3. Raw CV / Resume Text (Optional)
+                3. CV / Resume (Paste or Upload PDF)
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Paste your CV text below and use automated extraction to find skills.
+                Upload your PDF resume or paste text to auto-extract skills using PyMuPDF.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleParseCv}
-              disabled={parsing || !rawCv.trim()}
-              className="px-3.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40"
-            >
-              <Sparkles className={`w-3.5 h-3.5 ${parsing ? 'animate-spin' : ''}`} />
-              <span>{parsing ? 'Extracting...' : 'Auto-Extract Skills'}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {/* PDF Upload Button */}
+              <label className="cursor-pointer px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+                <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Upload PDF (PyMuPDF)</span>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setParsing(true);
+                    try {
+                      const res = await api.uploadCvPdf(file);
+                      if (res.extracted_skills && res.extracted_skills.length > 0) {
+                        const merged = Array.from(new Set([...skills, ...res.extracted_skills]));
+                        setSkills(merged);
+                      }
+                      if (res.extracted_experience > 0) {
+                        setExperience(res.extracted_experience);
+                      }
+                      const updatedProfile = await api.getProfile();
+                      setRawCv(updatedProfile.raw_cv_text || '');
+                      onProfileUpdated(updatedProfile);
+                      setSavedSuccess(true);
+                      setTimeout(() => setSavedSuccess(false), 3000);
+                    } catch (err: any) {
+                      alert(err.message || 'Failed to parse PDF');
+                    } finally {
+                      setParsing(false);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </label>
+
+              {/* Text Extract Button */}
+              <button
+                type="button"
+                onClick={handleParseCv}
+                disabled={parsing || !rawCv.trim()}
+                className="px-3.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${parsing ? 'animate-spin' : ''}`} />
+                <span>{parsing ? 'Extracting...' : 'Auto-Extract Text'}</span>
+              </button>
+            </div>
           </div>
 
           <textarea
             rows={5}
             value={rawCv}
             onChange={(e) => setRawCv(e.target.value)}
-            placeholder="Paste your CV content, projects, responsibilities, or technical summary..."
+            placeholder="Paste your CV content or upload a PDF above..."
             className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
           />
         </div>

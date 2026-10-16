@@ -11,6 +11,13 @@ export interface ScoreBreakdown {
   match_percentage_skills: number;
 }
 
+export interface RadarItem {
+  subject: string;
+  candidate: number;
+  required: number;
+  fullMark: number;
+}
+
 export interface JobListing {
   id: number;
   title: string;
@@ -31,6 +38,19 @@ export interface JobListing {
   score_breakdown?: ScoreBreakdown;
   summary_explanation?: string;
   application_status?: string | null;
+  deadline_status?: 'EXPIRED' | 'EXPIRING_SOON' | 'ACTIVE' | 'OPEN' | null;
+  days_until_deadline?: number | null;
+  radar_data?: RadarItem[];
+}
+
+export interface PaginatedJobsResponse {
+  items: JobListing[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
 }
 
 export interface UserProfile {

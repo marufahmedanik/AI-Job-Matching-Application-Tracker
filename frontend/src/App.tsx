@@ -6,7 +6,16 @@ import { ApplicationKanban } from './components/ApplicationKanban';
 import { AddJobModal } from './components/AddJobModal';
 import { api } from './services/api';
 import type { JobListing, UserProfile, JobApplication } from './types';
-import { Search, Filter, Sparkles, TrendingUp, CheckCircle, ShieldAlert } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  Sparkles,
+  TrendingUp,
+  CheckCircle,
+  ShieldAlert,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'jobs' | 'kanban' | 'profile'>('jobs');
@@ -17,7 +26,12 @@ export const App: React.FC = () => {
   const [isSeeding, setIsSeeding] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Filters
+  // Pagination & Filters
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(6);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalJobsCount, setTotalJobsCount] = useState(0);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [scoreFilter, setScoreFilter] = useState<'all' | '80' | '60'>('all');
   const [sortBy, setSortBy] = useState<'match' | 'recent' | 'title'>('match');
@@ -25,17 +39,22 @@ export const App: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [fetchedProfile, fetchedJobs, fetchedApps] = await Promise.all([
+      const minScoreVal = scoreFilter === '80' ? 80 : scoreFilter === '60' ? 60 : undefined;
+
+      const [fetchedProfile, paginatedData, fetchedApps] = await Promise.all([
         api.getProfile(),
-        api.getJobs(sortBy),
+        api.getJobs(page, pageSize, sortBy, undefined, minScoreVal),
         api.getApplications()
       ]);
+
       setProfile(fetchedProfile);
-      setJobs(fetchedJobs);
+      setJobs(paginatedData.items || []);
+      setTotalPages(paginatedData.total_pages || 1);
+      setTotalJobsCount(paginatedData.total || 0);
       setApplications(fetchedApps);
 
-      // If database is empty, seed automatically once
-      if (fetchedJobs.length === 0) {
+      // If database is completely empty, seed sample jobs automatically once
+      if (paginatedData.total === 0 && scoreFilter === 'all') {
         await handleSeed();
       }
     } catch (err) {
@@ -47,14 +66,17 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [sortBy]);
+  }, [page, sortBy, scoreFilter]);
 
   const handleSeed = async () => {
     setIsSeeding(true);
     try {
       await api.seedDatabase();
-      const updatedJobs = await api.getJobs(sortBy);
-      setJobs(updatedJobs);
+      setPage(1);
+      const paginatedData = await api.getJobs(1, pageSize, sortBy);
+      setJobs(paginatedData.items || []);
+      setTotalPages(paginatedData.total_pages || 1);
+      setTotalJobsCount(paginatedData.total || 0);
     } catch (err) {
       console.error(err);
     } finally {
@@ -65,11 +87,11 @@ export const App: React.FC = () => {
   const handleTrackJob = async (jobId: number, status: string) => {
     try {
       await api.trackApplication(jobId, status);
-      const [updatedJobs, updatedApps] = await Promise.all([
-        api.getJobs(sortBy),
+      const [paginatedData, updatedApps] = await Promise.all([
+        api.getJobs(page, pageSize, sortBy),
         api.getApplications()
       ]);
-      setJobs(updatedJobs);
+      setJobs(paginatedData.items || []);
       setApplications(updatedApps);
     } catch (err) {
       console.error(err);
@@ -78,19 +100,18 @@ export const App: React.FC = () => {
 
   const handleJobAdded = (newJob: JobListing) => {
     setJobs([newJob, ...jobs]);
+    setTotalJobsCount((prev) => prev + 1);
   };
 
-  // Filtered jobs
-  const filteredJobs = jobs.filter((job) => {
-    const matchesSearch =
-      job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (job.matched_skills && job.matched_skills.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase())));
-
-    const score = job.match_score || 0;
-    if (scoreFilter === '80') return matchesSearch && score >= 80;
-    if (scoreFilter === '60') return matchesSearch && score >= 60;
-    return matchesSearch;
+  // Client search filter on current page items
+  const displayJobs = jobs.filter((job) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      job.title.toLowerCase().includes(query) ||
+      job.company.toLowerCase().includes(query) ||
+      (job.matched_skills && job.matched_skills.some((s) => s.toLowerCase().includes(query)))
+    );
   });
 
   const highMatchCount = jobs.filter((j) => (j.match_score || 0) >= 80).length;
@@ -104,7 +125,7 @@ export const App: React.FC = () => {
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onSeed={handleSeed}
         isSeeding={isSeeding}
-        totalJobs={jobs.length}
+        totalJobs={totalJobsCount}
       />
 
       {/* Main Content Area */}
@@ -113,8 +134,8 @@ export const App: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-400">Total Available Jobs</p>
-              <p className="text-2xl font-extrabold text-white mt-1">{jobs.length}</p>
+              <p className="text-xs font-semibold text-slate-400">Total Circulars In System</p>
+              <p className="text-2xl font-extrabold text-white mt-1">{totalJobsCount}</p>
             </div>
             <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
               <Sparkles className="w-5 h-5" />
@@ -133,7 +154,7 @@ export const App: React.FC = () => {
 
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-400">Active Applications</p>
+              <p className="text-xs font-semibold text-slate-400">Tracked Applications</p>
               <p className="text-2xl font-extrabold text-teal-400 mt-1">{applications.length}</p>
             </div>
             <div className="p-3 bg-teal-500/10 text-teal-400 rounded-xl border border-teal-500/20">
@@ -143,7 +164,7 @@ export const App: React.FC = () => {
 
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-400">Target Candidate Role</p>
+              <p className="text-xs font-semibold text-slate-400">Target Role</p>
               <p className="text-sm font-bold text-white mt-1 truncate max-w-[180px]">
                 {profile?.target_role || 'Software QA Engineer'}
               </p>
@@ -181,27 +202,27 @@ export const App: React.FC = () => {
                   <Filter className="w-3.5 h-3.5" /> Filter:
                 </span>
                 <button
-                  onClick={() => setScoreFilter('all')}
+                  onClick={() => { setScoreFilter('all'); setPage(1); }}
                   className={`px-3 py-1.5 rounded-lg font-medium transition ${
                     scoreFilter === 'all'
                       ? 'bg-emerald-600 text-white'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
                   }`}
                 >
-                  All ({jobs.length})
+                  All ({totalJobsCount})
                 </button>
                 <button
-                  onClick={() => setScoreFilter('80')}
+                  onClick={() => { setScoreFilter('80'); setPage(1); }}
                   className={`px-3 py-1.5 rounded-lg font-medium transition ${
                     scoreFilter === '80'
                       ? 'bg-emerald-600 text-white'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
                   }`}
                 >
-                  80%+ Strong Match ({highMatchCount})
+                  80%+ Strong Match
                 </button>
                 <button
-                  onClick={() => setScoreFilter('60')}
+                  onClick={() => { setScoreFilter('60'); setPage(1); }}
                   className={`px-3 py-1.5 rounded-lg font-medium transition ${
                     scoreFilter === '60'
                       ? 'bg-emerald-600 text-white'
@@ -217,7 +238,7 @@ export const App: React.FC = () => {
                 <span className="text-slate-400">Sort by:</span>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
+                  onChange={(e) => { setSortBy(e.target.value as any); setPage(1); }}
                   className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-emerald-500"
                 >
                   <option value="match">Highest Match Score</option>
@@ -236,11 +257,11 @@ export const App: React.FC = () => {
             </div>
 
             {/* Jobs Grid */}
-            {filteredJobs.length === 0 ? (
+            {displayJobs.length === 0 ? (
               <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800">
                 <p className="text-sm text-slate-400">No job circulars match your current filter.</p>
                 <button
-                  onClick={() => { setSearchQuery(''); setScoreFilter('all'); }}
+                  onClick={() => { setSearchQuery(''); setScoreFilter('all'); setPage(1); }}
                   className="mt-3 text-xs text-emerald-400 hover:underline"
                 >
                   Reset search filters
@@ -248,13 +269,55 @@ export const App: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {filteredJobs.map((job) => (
+                {displayJobs.map((job) => (
                   <MatchScoreCard
                     key={job.id}
                     job={job}
                     onTrack={(status) => handleTrackJob(job.id, status)}
                   />
                 ))}
+              </div>
+            )}
+
+            {/* Scalable Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-slate-800/80 pt-4 text-xs">
+                <div className="text-slate-400">
+                  Showing page <strong className="text-white">{page}</strong> of <strong className="text-white">{totalPages}</strong> ({totalJobsCount} total listings)
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Previous</span>
+                  </button>
+
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => setPage(i + 1)}
+                      className={`w-7 h-7 rounded-lg font-semibold transition ${
+                        page === i + 1
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -274,7 +337,6 @@ export const App: React.FC = () => {
             profile={profile}
             onProfileUpdated={(updated) => {
               setProfile(updated);
-              // reload jobs to reflect recomputed match scores
               loadData();
             }}
           />

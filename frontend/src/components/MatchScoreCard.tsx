@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
-import { CheckCircle2, AlertCircle, ChevronDown, ChevronUp, ExternalLink, Award, Sparkles } from 'lucide-react';
+import {
+  CheckCircle2,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Sparkles,
+  Clock,
+  AlertTriangle,
+  Radar as RadarIcon
+} from 'lucide-react';
 import type { JobListing } from '../types';
+import { SkillRadarChart } from './SkillRadarChart';
 
 interface MatchScoreCardProps {
   job: JobListing;
@@ -10,16 +21,10 @@ interface MatchScoreCardProps {
 
 export const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ job, onTrack, isCompact = false }) => {
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showRadar, setShowRadar] = useState(false);
 
   const score = Math.round(job.match_score || 0);
   const breakdown = job.score_breakdown;
-
-  // Score coloring
-  const getScoreColor = (val: number) => {
-    if (val >= 80) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
-    if (val >= 60) return 'text-amber-400 bg-amber-500/10 border-amber-500/30';
-    return 'text-rose-400 bg-rose-500/10 border-rose-500/30';
-  };
 
   const getProgressBarColor = (val: number) => {
     if (val >= 80) return 'bg-emerald-500';
@@ -27,137 +32,189 @@ export const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ job, onTrack, is
     return 'bg-rose-500';
   };
 
+  // Render deadline badge based on calculated deadline_status
+  const renderDeadlineBadge = () => {
+    if (!job.deadline_status || job.deadline_status === 'OPEN') {
+      return (
+        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-300 border border-slate-700 flex items-center gap-1">
+          <Clock className="w-3 h-3 text-emerald-400" />
+          <span>Open</span>
+        </span>
+      );
+    }
+    if (job.deadline_status === 'EXPIRING_SOON') {
+      return (
+        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
+          <AlertTriangle className="w-3 h-3 text-amber-400" />
+          <span>
+            Expires in {job.days_until_deadline} {job.days_until_deadline === 1 ? 'day' : 'days'}!
+          </span>
+        </span>
+      );
+    }
+    if (job.deadline_status === 'EXPIRED') {
+      return (
+        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/40 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3 text-rose-400" />
+          <span>Expired</span>
+        </span>
+      );
+    }
+    return (
+      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
+        <Clock className="w-3 h-3 text-slate-400" />
+        <span>{job.deadline}</span>
+      </span>
+    );
+  };
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all hover:border-slate-700">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all hover:border-slate-700 flex flex-col justify-between">
       {/* Background subtle glow */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
 
-      {/* Header with Title & Score */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-              {job.source || 'Bdjobs'}
-            </span>
-            <span className="text-xs text-slate-400">{job.location}</span>
-          </div>
-          <h3 className="text-lg font-bold text-white tracking-tight leading-snug">{job.title}</h3>
-          <p className="text-sm font-medium text-slate-400 mt-0.5">{job.company}</p>
-        </div>
-
-        {/* The Illustrative Match Score Display */}
-        <div className="text-right flex-shrink-0">
-          <div className="text-xs text-slate-400 font-medium mb-1">Illustrative match score</div>
-          <div className="flex items-baseline justify-end gap-1">
-            <span className={`text-3xl font-extrabold tracking-tight ${score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-amber-400' : 'text-rose-400'}`}>
-              {score}
-            </span>
-            <span className="text-sm font-semibold text-slate-500">/100</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="w-full bg-slate-800 rounded-full h-2 mt-3 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${getProgressBarColor(score)}`}
-          style={{ width: `${Math.min(100, Math.max(5, score))}%` }}
-        />
-      </div>
-
-      {/* Matched vs Missing Explanation Pills */}
-      <div className="mt-4 space-y-2.5 text-xs">
-        {/* Matched list */}
-        <div className="flex items-start gap-2">
-          <span className="font-semibold text-emerald-400 flex items-center gap-1 min-w-[70px]">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Matched:
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {job.matched_skills && job.matched_skills.length > 0 ? (
-              job.matched_skills.map((skill, idx) => (
-                <span
-                  key={idx}
-                  className="px-2 py-0.5 rounded-md bg-emerald-950/60 text-emerald-300 border border-emerald-800/40 font-medium"
-                >
-                  {skill}
-                </span>
-              ))
-            ) : (
-              <span className="text-slate-500 italic">None detected</span>
-            )}
-          </div>
-        </div>
-
-        {/* Missing list */}
-        <div className="flex items-start gap-2">
-          <span className="font-semibold text-rose-400 flex items-center gap-1 min-w-[70px]">
-            <AlertCircle className="w-3.5 h-3.5" /> Missing:
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {job.missing_skills && job.missing_skills.length > 0 ? (
-              job.missing_skills.map((item, idx) => (
-                <span
-                  key={idx}
-                  className="px-2 py-0.5 rounded-md bg-rose-950/50 text-rose-300 border border-rose-800/40 font-medium"
-                >
-                  {item}
-                </span>
-              ))
-            ) : (
-              <span className="text-emerald-400 font-medium">None! Ready to apply.</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Explanation */}
-      {job.summary_explanation && (
-        <p className="mt-3 text-xs text-slate-300 bg-slate-800/60 p-2.5 rounded-xl border border-slate-850 flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-          <span>{job.summary_explanation}</span>
-        </p>
-      )}
-
-      {/* Expandable Criteria Breakdown */}
-      {breakdown && (
-        <div className="mt-3">
-          <button
-            onClick={() => setShowBreakdown(!showBreakdown)}
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 transition font-medium"
-          >
-            <span>{showBreakdown ? 'Hide score breakdown' : 'Why this score? View weighted breakdown'}</span>
-            {showBreakdown ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
-
-          {showBreakdown && (
-            <div className="mt-3 pt-3 border-t border-slate-800 space-y-2 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Technical Skills (50% max)</span>
-                <span className="font-semibold text-white">{breakdown.skills_score} / 50</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Experience Requirement (25% max)</span>
-                <span className="font-semibold text-white">{breakdown.experience_score} / 25</span>
-              </div>
-              <div className="text-[11px] text-slate-500 italic pl-1">
-                ↳ {breakdown.experience_status}
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Role & Title Alignment (15% max)</span>
-                <span className="font-semibold text-white">{breakdown.role_score} / 15</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Education & Degree (10% max)</span>
-                <span className="font-semibold text-white">{breakdown.education_score} / 10</span>
-              </div>
+      <div>
+        {/* Header with Title & Score */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center flex-wrap gap-2 mb-1.5">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                {job.source || 'Bdjobs'}
+              </span>
+              <span className="text-xs text-slate-400">{job.location}</span>
+              {renderDeadlineBadge()}
             </div>
-          )}
+            <h3 className="text-lg font-bold text-white tracking-tight leading-snug">{job.title}</h3>
+            <p className="text-sm font-medium text-slate-400 mt-0.5">{job.company}</p>
+          </div>
+
+          {/* The Illustrative Match Score Display */}
+          <div className="text-right flex-shrink-0">
+            <div className="text-xs text-slate-400 font-medium mb-1">Illustrative match score</div>
+            <div className="flex items-baseline justify-end gap-1">
+              <span className={`text-3xl font-extrabold tracking-tight ${score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-amber-400' : 'text-rose-400'}`}>
+                {score}
+              </span>
+              <span className="text-sm font-semibold text-slate-500">/100</span>
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* Progress Bar */}
+        <div className="w-full bg-slate-800 rounded-full h-2 mt-3 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-700 ${getProgressBarColor(score)}`}
+            style={{ width: `${Math.min(100, Math.max(5, score))}%` }}
+          />
+        </div>
+
+        {/* Matched vs Missing Explanation Pills */}
+        <div className="mt-4 space-y-2.5 text-xs">
+          {/* Matched list */}
+          <div className="flex items-start gap-2">
+            <span className="font-semibold text-emerald-400 flex items-center gap-1 min-w-[70px]">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Matched:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {job.matched_skills && job.matched_skills.length > 0 ? (
+                job.matched_skills.map((skill, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-0.5 rounded-md bg-emerald-950/60 text-emerald-300 border border-emerald-800/40 font-medium"
+                  >
+                    {skill}
+                  </span>
+                ))
+              ) : (
+                <span className="text-slate-500 italic">None detected</span>
+              )}
+            </div>
+          </div>
+
+          {/* Missing list */}
+          <div className="flex items-start gap-2">
+            <span className="font-semibold text-rose-400 flex items-center gap-1 min-w-[70px]">
+              <AlertCircle className="w-3.5 h-3.5" /> Missing:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {job.missing_skills && job.missing_skills.length > 0 ? (
+                job.missing_skills.map((item, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-0.5 rounded-md bg-rose-950/50 text-rose-300 border border-rose-800/40 font-medium"
+                  >
+                    {item}
+                  </span>
+                ))
+              ) : (
+                <span className="text-emerald-400 font-medium">None! Ready to apply.</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Summary Explanation */}
+        {job.summary_explanation && (
+          <p className="mt-3 text-xs text-slate-300 bg-slate-800/60 p-2.5 rounded-xl border border-slate-850 flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+            <span>{job.summary_explanation}</span>
+          </p>
+        )}
+
+        {/* Visual Radar Chart Toggle */}
+        {job.radar_data && job.radar_data.length > 0 && (
+          <div className="mt-2">
+            <button
+              onClick={() => setShowRadar(!showRadar)}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-400 hover:text-teal-300 transition"
+            >
+              <RadarIcon className="w-3.5 h-3.5" />
+              <span>{showRadar ? 'Hide Competency Radar' : '📊 View Competency Radar Chart'}</span>
+            </button>
+            {showRadar && <SkillRadarChart data={job.radar_data} />}
+          </div>
+        )}
+
+        {/* Expandable Criteria Breakdown */}
+        {breakdown && (
+          <div className="mt-2.5">
+            <button
+              onClick={() => setShowBreakdown(!showBreakdown)}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 transition font-medium"
+            >
+              <span>{showBreakdown ? 'Hide score breakdown' : 'Why this score? View weighted breakdown'}</span>
+              {showBreakdown ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+
+            {showBreakdown && (
+              <div className="mt-3 pt-3 border-t border-slate-800 space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Technical Skills (50% max)</span>
+                  <span className="font-semibold text-white">{breakdown.skills_score} / 50</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Experience Requirement (25% max)</span>
+                  <span className="font-semibold text-white">{breakdown.experience_score} / 25</span>
+                </div>
+                <div className="text-[11px] text-slate-500 italic pl-1">
+                  ↳ {breakdown.experience_status}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Role & Title Alignment (15% max)</span>
+                  <span className="font-semibold text-white">{breakdown.role_score} / 15</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Education & Degree (10% max)</span>
+                  <span className="font-semibold text-white">{breakdown.education_score} / 10</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Action Bar */}
       <div className="mt-5 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
-        {/* Direct Original Listing Link (Strict adherence: Review & apply on official source) */}
         {job.url ? (
           <a
             href={job.url}
