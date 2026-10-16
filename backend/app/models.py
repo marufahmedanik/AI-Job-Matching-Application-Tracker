@@ -1,7 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from .database import Base
+
+_now = lambda: datetime.now(timezone.utc)
 
 
 class UserProfile(Base):
@@ -16,7 +18,7 @@ class UserProfile(Base):
     skills = Column(Text, default="Java, SQL, Git, API Testing, Postman, Manual Testing, Bug Reporting, Jira")
     preferred_location = Column(String(100), default="Dhaka, Bangladesh")
     raw_cv_text = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_now)
 
     applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
 
@@ -36,7 +38,7 @@ class JobListing(Base):
     education_req = Column(String(200), default="B.Sc. in CSE / IT or relevant field")
     required_skills = Column(Text, default="")
     raw_description = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_now)
 
     applications = relationship("JobApplication", back_populates="job", cascade="all, delete-orphan")
 
@@ -54,8 +56,8 @@ class JobApplication(Base):
     matched_skills = Column(Text, default="[]")       # JSON list
     missing_skills = Column(Text, default="[]")       # JSON list
     score_breakdown = Column(Text, default="{}")      # JSON object
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now, onupdate=_now)
 
     user = relationship("UserProfile", back_populates="applications")
     job = relationship("JobListing", back_populates="applications")

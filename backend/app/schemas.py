@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
@@ -32,9 +32,7 @@ class UserProfileUpdate(BaseModel):
 class UserProfileResponse(UserProfileBase):
     id: int
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class JobListingBase(BaseModel):
@@ -65,9 +63,7 @@ class JobListingResponse(JobListingBase):
     score_breakdown: Optional[Dict[str, Any]] = None
     summary_explanation: Optional[str] = None
     application_status: Optional[str] = None  # SAVED, APPLIED, etc. if application exists
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class JobApplicationUpdate(BaseModel):
@@ -90,9 +86,7 @@ class JobApplicationResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     job: JobListingBase
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class JobImportRequest(BaseModel):
