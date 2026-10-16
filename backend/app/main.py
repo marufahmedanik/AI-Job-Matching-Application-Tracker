@@ -436,6 +436,21 @@ async def import_job(payload: JobImportRequest, db: Session = Depends(get_db)):
 
 
 
+# ---------------- Live Bdjobs Scanner Endpoints ----------------
+@app.post("/api/jobs/sync-live", response_model=LiveSyncResponse)
+def sync_live_bdjobs_endpoint(payload: LiveSyncRequest = LiveSyncRequest(), db: Session = Depends(get_db)):
+    profile = get_or_create_default_profile(db)
+    result = BdjobsLiveScanner.sync_to_database(
+        db=db,
+        profile=profile,
+        category=payload.category if payload.category is not None else "8",
+        keyword=payload.keyword or "",
+        max_pages=min(payload.max_pages or 1, 5),
+        is_fresher=payload.is_fresher or False
+    )
+    return LiveSyncResponse(**result)
+
+
 @app.delete("/api/jobs/{job_id}")
 def delete_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(JobListing).filter(JobListing.id == job_id).first()
@@ -566,21 +581,6 @@ def delete_application(app_id: int, db: Session = Depends(get_db)):
     db.delete(app_item)
     db.commit()
     return {"message": "Application untracked"}
-
-
-# ---------------- Live Bdjobs Scanner Endpoints ----------------
-@app.post("/api/jobs/sync-live", response_model=LiveSyncResponse)
-def sync_live_bdjobs_endpoint(payload: LiveSyncRequest = LiveSyncRequest(), db: Session = Depends(get_db)):
-    profile = get_or_create_default_profile(db)
-    result = BdjobsLiveScanner.sync_to_database(
-        db=db,
-        profile=profile,
-        category=payload.category if payload.category is not None else "8",
-        keyword=payload.keyword or "",
-        max_pages=min(payload.max_pages or 1, 5),
-        is_fresher=payload.is_fresher or False
-    )
-    return LiveSyncResponse(**result)
 
 
 # ---------------- Seed Sample Data ----------------
